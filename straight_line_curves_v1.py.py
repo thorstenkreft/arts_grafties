@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+from pyparsing import null_debug_action
 
 class myAnimation():
     def __init__(self, num_lines, xy_ratio=1.0):
@@ -10,8 +11,11 @@ class myAnimation():
         self.nl = num_lines
         self.xy_ratio = xy_ratio
         self.x_data = np.arange(0, self.nl/self.xy_ratio*1.01, 0.1)
-        self.fig, self.ax = plt.subplots(figsize=(9,9))
+        self.fig, self.ax = plt.subplots(figsize=(9,9), facecolor='k')
+        self.ax.set_ylim(-num_lines,num_lines)
+        self.ax.set_xlim(-num_lines/xy_ratio,num_lines/xy_ratio)
         self.lines = []
+        self.plt_change = False
     
     def run_animation(self):
         for curr_line in range(self.nl):
@@ -25,22 +29,33 @@ class myAnimation():
         self.plot_data.set_index('x', inplace=True)
 
         for i in range(self.nl):
-            line, = self.ax.plot(self.plot_data[i], lw=0.6, c='w')
+            #line, = self.ax.plot(self.plot_data[i], lw=0.6, c='k')
+            line, = self.ax.plot(self.x_data, self.plot_data[i], lw=0.6, c='k')
             self.lines.append(line)
         self.ax.set_aspect('equal')
         self.ax.axis('off')
 
-        def setup_plot():
+        def setup_plot(p=0.5):
             for i in self.lines:
-                i.set_c('w')
+                i.set_lw(0)
+            v = np.random.rand()
+            if v > p:
+                self.plt_change = True
+            else:
+                self.plt_change = False
+            print(self.plt_change)
             return self.lines
 
         def update(i):
-            print(i)
-            self.lines[i].set_c('#03989e')
+            if self.plt_change:
+                self.lines[i].set_data(self.x_data, self.plot_data[i])
+                self.lines[i].set_c('#03989e')
+                self.lines[i].set_lw(0.8)
+            else:
+                self.lines[i].set_data(-self.plot_data[i], self.x_data)
+                self.lines[i].set_c('w')
+                self.lines[i].set_lw(0.4)
             return self.lines
-
-
 
         ani = animation.FuncAnimation(
             fig= self.fig,
@@ -56,5 +71,6 @@ class myAnimation():
 
 
 if __name__ == "__main__":
-    a = myAnimation(60,0.4)
+    #np.random.seed(19680801)
+    a = myAnimation(20,0.7)
     a.run_animation()

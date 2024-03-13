@@ -25,6 +25,14 @@ class myAnimation():
         self.lines[i].set_c('#03989e')
         return self.lines
 
+def random_flip(p=0.6):
+    """Return a random flip"""
+    while True:
+        v = np.random.rand()
+        if v > p:
+            return -1
+        else:
+            return 1
 
 if __name__ == "__main__":
 
@@ -42,6 +50,8 @@ if __name__ == "__main__":
     df[df < 0] = np.nan
     df['x'] = x_data
     df.set_index('x', inplace=True)
+
+    df = df*random_flip()
 
     a = myAnimation(df)
     ani = animation.FuncAnimation(
