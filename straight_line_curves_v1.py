@@ -1,66 +1,85 @@
-from matplotlib import lines
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+from pyparsing import null_debug_action
 
 class myAnimation():
-    def __init__(self, plot_data):
-        self.plot_data = plot_data
-        self.fig, self.ax = plt.subplots(figsize=(9,9))
-        self.lines = []
-        for i in self.plot_data.columns:
-            line, = self.ax.plot(self.plot_data[i], lw=0.6, c='w')
-            self.lines.append(line)
-        self.ax.set_aspect('equal')
+    def __init__(self, num_lines=10):
+        # random behaviour parameters
+        self.nl = num_lines
+        self.xy_ratio = 1.0
+        self.rand_xy_flip = False
+        self.rand_lw = 0.6
+        # plot parameters
+        self.fig = plt.figure(figsize=(8, 8), facecolor='k')
+        self.ax = plt.subplot(frameon=False)
         self.ax.axis('off')
+        self.ax.set_aspect('equal')
+        self.lines = []
+                
+    def run_animation(self):
+        def rand_xy_flip(p=0.5):
+            if p < np.random.rand():
+                return True
+            else:
+                return False
+        
+        def rand_line_width(p=0.5):
+            if p < np.random.rand():
+                self.rand_lw = np.random.rand()*0.8
 
+        def calc_line_data_points(curr_line):
+            c = self.nl-curr_line
+            m = -c*self.xy_ratio/(curr_line+1)
+            x_data = np.array([0, (curr_line+1)/self.xy_ratio])
+            y_data = m*x_data+c
+            # random change of x- and y-data
+            if self.rand_xy_flip:
+                return y_data, x_data
+            else:
+                return x_data, y_data
 
-    def setup_plot(self):
-        for i in self.lines:
-            i.set_c('w')
-        return self.lines
+        def init_func():
+            # setup random behaviour parameters
+            self.xy_ratio = np.random.rand()
+            self.rand_xy_flip = rand_xy_flip(0.8)
+            rand_line_width()
+            # remove previous/existing plot lines
+            for line in self.ax.get_lines():
+                line.remove()
+                del line
+            self.lines = []
+            # adjust x-y axes limits
+            if self.xy_ratio < 1:
+                lim = self.nl/self.xy_ratio
+            else:
+                lim = self.nl*self.xy_ratio
+            self.ax.set_xlim(0, lim)
+            self.ax.set_ylim(0, lim)
+            # add plot lines
+            for i in range(self.nl):
+                line = self.ax.plot([], [])[0]
+                self.lines.append(line)
+            return self.lines
 
-    def update(self, i):
-        self.lines[i].set_c('#03989e')
-        return self.lines
+        def update(i):
+            self.lines[i].set_data(calc_line_data_points(i))
+            self.lines[i].set_c('w')
+            self.lines[i].set_lw(self.rand_lw)
+            return self.lines
 
-def random_flip(p=0.6):
-    """Return a random flip"""
-    while True:
-        v = np.random.rand()
-        if v > p:
-            return -1
-        else:
-            return 1
+        ani = animation.FuncAnimation(
+            fig=self.fig,
+            func=update,
+            interval=50,
+            init_func=init_func,
+            frames=self.nl, 
+            repeat=True,
+            blit= False
+        )
+        plt.show()
+
 
 if __name__ == "__main__":
-
-    num_lines = 60
-    xy_ratio = 0.4
-    x_data = np.arange(0, num_lines/xy_ratio*1.01, 0.1)
-
-    data = []
-    for curr_line in range(num_lines):
-        # line function (y = mx +c)
-        c = num_lines-curr_line
-        m = -c*xy_ratio/(curr_line+1)
-        data.append(m*x_data+c)
-    df = pd.DataFrame(data).T
-    df[df < 0] = np.nan
-    df['x'] = x_data
-    df.set_index('x', inplace=True)
-
-    df = df*random_flip()
-
-    a = myAnimation(df)
-    ani = animation.FuncAnimation(
-            fig= a.fig,
-            func= a.update,
-            interval= 100,
-            init_func= a.setup_plot,
-            frames= num_lines, 
-            repeat= False,
-            blit= True
-            )
-    plt.show()
+    a = myAnimation(100)  #np.random.randint(8,100)
+    a.run_animation()
